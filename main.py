@@ -16,7 +16,61 @@ import pyautogui
 from webdriver_manager.chrome import ChromeDriverManager
 
 
-## pyinstaller main.py -F --upx-dir C:\DevStudy\upx401w64\
+# pyinstaller main.py -F --upx-dir C:\DevStudy\upx401w64\
+
+
+def login():
+    root = Tk()
+    root.wm_attributes("-topmost", 1)
+    root.title("로그인")
+    root.geometry("290x92")
+
+    label1 = Label(root, width=14, text="아이디")
+    label1.grid(row=1, column=1)
+    entry1 = Entry(root, width=20)
+    entry1.insert(0, "thelight47")
+    entry1.grid(row=1, column=2)
+    label2 = Label(root, width=14, text="비밀번호")
+    label2.grid(row=2, column=1)
+    entry2 = Entry(root, show="*", width=20)
+    entry2.insert(0, "11")
+    entry2.grid(row=2, column=2)
+    label3 = Label(root, width=14, text="자동입력방지")
+    label3.grid(row=3, column=1)
+    entry3 = Entry(root, width=20)
+    entry3.grid(row=3, column=2)
+    entry3.focus()
+    # entry3.bind("<Return>", login(event=""))
+    button1 = Button(root, width=40, text="로그인",
+                     command=lambda: confirm_login(root, entry1.get(), entry2.get(), entry3.get()))
+    button1.grid(row=4, column=1, columnspan=2)
+    root.mainloop()
+
+
+def confirm_login(_root, _id, _pwd, _captcha):
+    _root.destroy()
+
+    id_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_id"]')
+    id_input.click()
+    id_input.clear()
+    id_input.send_keys(_id)
+
+    pwd_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_pass"]')
+    pwd_input.click()
+    pwd_input.clear()
+    pwd_input.send_keys(_pwd)
+
+    captcha_input = driver.find_element(By.CSS_SELECTOR, 'input[name="cap_text"]')
+    captcha_input.click()
+    captcha_input.clear()
+    captcha_input.send_keys(_captcha)
+    captcha_input.send_keys(Keys.ENTER)
+
+    try:
+        driver.maximize_window()
+    except UnexpectedAlertPresentException:
+        pyautogui.alert("다시 입력해 주세요.")
+        login()
 
 
 def get_url(_uid):
@@ -43,7 +97,7 @@ def upload_image(_img_src, _uid):
 
 
 def change_image(_url, _uid):
-    driver.execute_script('window.open("'+_url+'");')
+    driver.execute_script('window.open("' + _url + '");')
     # time.sleep(1)
     driver.switch_to.window(driver.window_handles[-1])
     url_input = driver.find_element(By.CSS_SELECTOR, '#main_0_input')
@@ -62,60 +116,7 @@ def change_image(_url, _uid):
     driver.switch_to.window(driver.window_handles[0])
 
 
-def login():
-
-    root = Tk()
-    root.wm_attributes("-topmost", 1)
-    root.title("로그인")
-    root.geometry("290x92")
-
-    label1 = Label(root, width=14, text="아이디")
-    label1.grid(row=1, column=1)
-    entry1 = Entry(root, width=20)
-    entry1.insert(0, "thelight47")
-    entry1.grid(row=1, column=2)
-    label2 = Label(root, width=14, text="비밀번호")
-    label2.grid(row=2, column=1)
-    entry2 = Entry(root, show="*", width=20)
-    entry2.insert(0, "11")
-    entry2.grid(row=2, column=2)
-    label3 = Label(root, width=14, text="자동입력방지")
-    label3.grid(row=3, column=1)
-    entry3 = Entry(root, width=20)
-    entry3.grid(row=3, column=2)
-    entry3.focus()
-    # entry3.bind("<Return>", login(event=""))
-    button1 = Button(root, width=40, text="로그인", command=lambda: main_job(root, entry1.get(), entry2.get(), entry3.get()))
-    button1.grid(row=4, column=1, columnspan=2)
-    root.mainloop()
-
-
-def main_job(_root, _id, _pwd, _captcha):
-
-    _root.destroy()
-
-    id_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_id"]')
-    id_input.click()
-    id_input.clear()
-    id_input.send_keys(_id)
-
-    pwd_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_pass"]')
-    pwd_input.click()
-    pwd_input.clear()
-    pwd_input.send_keys(_pwd)
-
-    captcha_input = driver.find_element(By.CSS_SELECTOR, 'input[name="cap_text"]')
-    captcha_input.click()
-    captcha_input.clear()
-    captcha_input.send_keys(_captcha)
-    captcha_input.send_keys(Keys.ENTER)
-
-    try:
-        driver.maximize_window()
-    except UnexpectedAlertPresentException:
-        pyautogui.alert("다시 입력해 주세요.")
-        login()
-
+def main_job():
     page_num = int(1)
     job_count = int(0)
     success = int(0)
@@ -129,7 +130,7 @@ def main_job(_root, _id, _pwd, _captcha):
         )
 
         # TODO: 일시 정지 후 대기 버튼 클릭하면 진행
-        
+
         prev_height = driver.execute_script("return document.body.scrollHeight")
         while True:
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
@@ -186,3 +187,4 @@ if __name__ == '__main__':
 
     driver.get('https://tmg191.cafe24.com/mall/admin/admin_login.php')
     login()
+    main_job()
