@@ -14,6 +14,8 @@ from selenium.common.exceptions import NoSuchElementException, NoAlertPresentExc
 from tkinter import *
 import pyautogui
 from webdriver_manager.chrome import ChromeDriverManager
+import re
+import datetime
 
 
 # pyinstaller main.py -F --upx-dir C:\DevStudy\upx401w64\
@@ -40,7 +42,7 @@ def login():
     entry3 = Entry(login_window, width=20)
     entry3.grid(row=3, column=2)
     entry3.focus()
-    # entry3.bind("<Return>", login(event=""))
+    # entry3.bind("<Return>", confirm_login(login_window, entry1.get(), entry2.get(), entry3.get()))
     button1 = Button(login_window, width=40, text="로그인",
                      command=lambda: confirm_login(login_window, entry1.get(), entry2.get(), entry3.get()))
     button1.grid(row=4, column=1, columnspan=2)
@@ -78,43 +80,62 @@ def get_popup_url(_uid):
     return _url
 
 
-def get_image(_popup_url):
+def get_imgs(_popup_url):
     response = requests.get(_popup_url)
     soup = BeautifulSoup(response.text, "html.parser")
-    _img_src = soup.img['src']
-    return _img_src
+    raw_img_srcs = soup.find_all('img', {'src': re.compile('^https://'), 'origin': ""})
+    _img_srcs = []
+    for elem in raw_img_srcs:
+        _img_srcs.append(elem.get('src'))
+    return _img_srcs
 
 
-def upload_image(popup_url, _uid):
-    _img_src = get_image(popup_url)
-    # for _img_srcs
+def upload_imgs(popup_url, date_time, popup_url_ind, _uid):
+    _img_srcs = get_imgs(popup_url)
     session = ftplib.FTP()
     session.connect('222.239.231.240', 2012)
     session.login("administrator", "J@dpftk4)")
     session.encoding = 'utf-8'
-    with urlopen(_img_src) as f:
-        # TODO: 파일명 변경 ex. 101522_221213_1
-        session.storbinary('STOR /NEW/' + _uid + '.jpg', f)
+
+    for _img_src_ind, _img_src in enumerate(_img_srcs):
+        print("상품 번호: [" + _uid + "] 옵션: (" + str(popup_url_ind) + ", " + str(_img_src_ind) + ") 업로드 진행중")
+        with urlopen(_img_src) as f:
+            session.storbinary(
+                'STOR /NEW/' + _uid + '_'
+                + date_time + '_'
+                + str(popup_url_ind) + '_'
+                + str(_img_src_ind) + '.jpg', f)
     session.quit()
 
 
-def change_image(_url, _uid):
-    url_input = driver.find_element(By.CSS_SELECTOR, '#main_0_input')
-    url_input.click()
-    url_input.clear()
-    url_input.send_keys("https://thelight47777.add4s.co.kr/TreeImgjl4/NEW/" + _uid + ".jpg")
-    url_input.send_keys(Keys.ENTER)
-    while True:
-        try:
-            alert = driver.switch_to.alert
-            alert.accept()
-            break
-        except NoAlertPresentException:
-            time.sleep(0.1)
+def change_imgs(_url, _base_file_name):
+
+    _url_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[id$="input"]')
+    for _url_inputs_ind in range(len(_url_inputs)):
+        _url_input = driver.find_elements(By.CSS_SELECTOR, 'input[id$="input"]')[_url_inputs_ind]
+        _uid = _base_file_name.split("_")[0]
+        popup_url_ind = _base_file_name.split("_")[2]
+        # _action = ActionChains(driver)
+        action.move_to_element(_url_input).perform()
+        # driver.execute_script("window.scrollTo(0, 731)")
+        # print(_url)
+        # print(_url_input)
+        print("상품 번호: [" + _uid + "] 옵션: (" + str(popup_url_ind) + ", " + str(_url_inputs_ind) + ") 이미지 변경 진행중")
+        _file_name = "https://thelight47777.add4s.co.kr/TreeImgjl4/NEW/" + _base_file_name + str(_url_inputs_ind) + ".jpg"
+        _url_input.click()
+        _url_input.clear()
+        _url_input.send_keys(_file_name)
+        _url_input.send_keys(Keys.ENTER)
+        while True:
+            try:
+                alert = driver.switch_to.alert
+                alert.accept()
+                break
+            except NoAlertPresentException:
+                time.sleep(0.1)
 
 
 def main_job():
-
     driver.get('https://tmg191.cafe24.com/mall/admin/admin_goods.php?ps_num=100&ps_page=1')
 
     wait_window = Tk()
@@ -131,17 +152,15 @@ def main_job():
     success = int(0)
     fail = int(0)
 
-    base_url = driver.current_url.split('ps_page')[0]+'&ps_page='
+    base_url = driver.current_url.split('ps_page')[0] + '&ps_page='
 
     while True:
-        url = base_url+str(page_num)
+        url = base_url + str(page_num)
         driver.get(url)
 
         prev_height = driver.execute_script("return document.body.scrollHeight")
         while True:
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-            # TODO: 안정적인/빠른 버전 (1)
-            time.sleep(1)
             curr_height = driver.execute_script("return document.body.scrollHeight")
 
             if curr_height == prev_height:
@@ -158,31 +177,33 @@ def main_job():
             print(f'{job_count}번째 상품')
             uid = item_id.get_attribute('value')
             popup_base_url = get_popup_url(uid)
-            popup_urls = [popup_base_url, popup_base_url+'&mode=option', popup_base_url+'&mode=detail']
+            popup_urls = [popup_base_url, popup_base_url + '&mode=option', popup_base_url + '&mode=detail']
             driver.execute_script('window.open()')
             driver.switch_to.window(driver.window_handles[-1])
 
-            for popup_url in popup_urls:
-                driver.get(popup_url)
-                try:
-                    upload_image(popup_url, uid)
-                    print("상품 번호 [" + uid + "] 업로드 완료!")
+            try:
+                for popup_url_ind, popup_url in enumerate(popup_urls):
+                    driver.get(popup_url)
                     try:
-                        change_image(popup_url, uid)
-                        print("상품 번호 [" + uid + "] 이미지 변경 완료!")
-                        success += 1
-                    except Exception:
-                        print("상품 번호 [" + uid + "] 이미지 변경 중 오류 발생")
+                        date_time = datetime.datetime.now().strftime("%y%m%d")
+                        upload_imgs(popup_url, date_time, popup_url_ind, uid)
+                        _base_file_name = uid + '_' + date_time + '_' + str(popup_url_ind) + '_'
+                        change_imgs(popup_url, _base_file_name)
+                    except Exception as e:
+                        print("작업 중 오류 발생")
+                        print(e)
                         fail += 1
-                        continue
-                except Exception:
-                    print("상품 번호 [" + uid + "] 업로드 중 오류 발생")
-                    fail += 1
+                        raise e
+                success += 1
+            except Exception as e:
+                pass
+
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
 
         page_num += 1
     pyautogui.alert(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
+    print(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
 
 
 if __name__ == '__main__':
