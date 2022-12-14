@@ -73,7 +73,7 @@ def confirm_login(_login_window, _id, _pwd, _captcha):
         login()
 
 
-def get_url(_uid):
+def get_popup_url(_uid):
     _url = "https://tmg191.cafe24.com/mall/admin/admin_goods_change_image_all.php?goods_uid=" + _uid
     return _url
 
@@ -85,7 +85,9 @@ def get_image(_popup_url):
     return _img_src
 
 
-def upload_image(_img_src, _uid):
+def upload_image(popup_url, _uid):
+    _img_src = get_image(popup_url)
+    # for _img_srcs
     session = ftplib.FTP()
     session.connect('222.239.231.240', 2012)
     session.login("administrator", "J@dpftk4)")
@@ -97,9 +99,6 @@ def upload_image(_img_src, _uid):
 
 
 def change_image(_url, _uid):
-    driver.execute_script('window.open("' + _url + '");')
-    # time.sleep(1)
-    driver.switch_to.window(driver.window_handles[-1])
     url_input = driver.find_element(By.CSS_SELECTOR, '#main_0_input')
     url_input.click()
     url_input.clear()
@@ -112,8 +111,6 @@ def change_image(_url, _uid):
             break
         except NoAlertPresentException:
             time.sleep(0.1)
-    driver.close()
-    driver.switch_to.window(driver.window_handles[0])
 
 
 def main_job():
@@ -160,25 +157,29 @@ def main_job():
             job_count += 1
             print(f'{job_count}번째 상품')
             uid = item_id.get_attribute('value')
-            popup_url = get_url(uid)
+            popup_base_url = get_popup_url(uid)
+            popup_urls = [popup_base_url, popup_base_url+'&mode=option', popup_base_url+'&mode=detail']
+            driver.execute_script('window.open()')
+            driver.switch_to.window(driver.window_handles[-1])
 
-            img_src = get_image(popup_url)
-            try:
-                # TODO: 3개의 탭 이미지 모두 업로드
-                upload_image(img_src, uid)
-                print("상품 번호 [" + uid + "] 업로드 완료!")
+            for popup_url in popup_urls:
+                driver.get(popup_url)
                 try:
-                    # TODO: 3개의 탭 이미지 모두 변경
-                    change_image(popup_url, uid)
-                    print("상품 번호 [" + uid + "] 이미지 변경 완료!")
-                    success += 1
+                    upload_image(popup_url, uid)
+                    print("상품 번호 [" + uid + "] 업로드 완료!")
+                    try:
+                        change_image(popup_url, uid)
+                        print("상품 번호 [" + uid + "] 이미지 변경 완료!")
+                        success += 1
+                    except Exception:
+                        print("상품 번호 [" + uid + "] 이미지 변경 중 오류 발생")
+                        fail += 1
+                        continue
                 except Exception:
-                    print("상품 번호 [" + uid + "] 이미지 변경 중 오류 발생")
+                    print("상품 번호 [" + uid + "] 업로드 중 오류 발생")
                     fail += 1
-                    continue
-            except Exception:
-                print("상품 번호 [" + uid + "] 업로드 중 오류 발생")
-                fail += 1
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
 
         page_num += 1
     pyautogui.alert(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
