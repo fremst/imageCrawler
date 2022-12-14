@@ -20,35 +20,35 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 
 def login():
-    root = Tk()
-    root.wm_attributes("-topmost", 1)
-    root.title("로그인")
-    root.geometry("290x92")
+    login_window = Tk()
+    login_window.wm_attributes("-topmost", 1)
+    login_window.title("로그인")
+    login_window.geometry("290x92")
 
-    label1 = Label(root, width=14, text="아이디")
+    label1 = Label(login_window, width=14, text="아이디")
     label1.grid(row=1, column=1)
-    entry1 = Entry(root, width=20)
+    entry1 = Entry(login_window, width=20)
     entry1.insert(0, "thelight47")
     entry1.grid(row=1, column=2)
-    label2 = Label(root, width=14, text="비밀번호")
+    label2 = Label(login_window, width=14, text="비밀번호")
     label2.grid(row=2, column=1)
-    entry2 = Entry(root, show="*", width=20)
+    entry2 = Entry(login_window, show="*", width=20)
     entry2.insert(0, "11")
     entry2.grid(row=2, column=2)
-    label3 = Label(root, width=14, text="자동입력방지")
+    label3 = Label(login_window, width=14, text="자동입력방지")
     label3.grid(row=3, column=1)
-    entry3 = Entry(root, width=20)
+    entry3 = Entry(login_window, width=20)
     entry3.grid(row=3, column=2)
     entry3.focus()
     # entry3.bind("<Return>", login(event=""))
-    button1 = Button(root, width=40, text="로그인",
-                     command=lambda: confirm_login(root, entry1.get(), entry2.get(), entry3.get()))
+    button1 = Button(login_window, width=40, text="로그인",
+                     command=lambda: confirm_login(login_window, entry1.get(), entry2.get(), entry3.get()))
     button1.grid(row=4, column=1, columnspan=2)
-    root.mainloop()
+    login_window.mainloop()
 
 
-def confirm_login(_root, _id, _pwd, _captcha):
-    _root.destroy()
+def confirm_login(_login_window, _id, _pwd, _captcha):
+    _login_window.destroy()
 
     id_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_id"]')
     id_input.click()
@@ -117,19 +117,28 @@ def change_image(_url, _uid):
 
 
 def main_job():
+
+    driver.get('https://tmg191.cafe24.com/mall/admin/admin_goods.php?ps_num=100&ps_page=1')
+
+    wait_window = Tk()
+    wait_window.wm_attributes("-topmost", 1)
+    wait_window.title("대기")
+    wait_window.geometry("150x32")
+    button1 = Button(wait_window, width=20, text="진행",
+                     command=lambda: [driver.execute_script('send_search()'), wait_window.destroy()])
+    button1.grid(row=1, column=1, columnspan=1)
+    wait_window.mainloop()
+
     page_num = int(1)
     job_count = int(0)
     success = int(0)
     fail = int(0)
-    while True:
-        driver.get(
-            'https://tmg191.cafe24.com/mall/admin/admin_goods.php?amode=detail_search&search_d=&ps_gmarket_option'
-            '=&date_type=&start_yy=2022&start_mm=12&start_dd=12&end_yy=2022&end_mm=12&end_dd=12&ps_site_id=&ps_category'
-            '=&ps_market_id=&ps_status=sale&search_type=goods_name&ps_subject=&ps_fn=&ps_sort=dateup&ps_num=100&ps_simple'
-            '=&ps_modify=&ps_page=' + str(page_num)
-        )
 
-        # TODO: 일시 정지 후 대기 버튼 클릭하면 진행
+    base_url = driver.current_url.split('ps_page')[0]+'&ps_page='
+
+    while True:
+        url = base_url+str(page_num)
+        driver.get(url)
 
         prev_height = driver.execute_script("return document.body.scrollHeight")
         while True:
