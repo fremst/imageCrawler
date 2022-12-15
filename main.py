@@ -14,53 +14,75 @@ from selenium.common.exceptions import NoSuchElementException, NoAlertPresentExc
 from tkinter import *
 import pyautogui
 from webdriver_manager.chrome import ChromeDriverManager
-import re
 import datetime
+import os
 
 
 # pyinstaller main.py -F --upx-dir C:\DevStudy\upx401w64\
+
+def get_config_data():
+    _config_data = {
+        'login_id': None,
+        'login_pwd': None,
+        'ftp_ip': None,
+        'ftp_port': None,
+        'ftp_id': None,
+        'ftp_pwd': None,
+        'ftp_folder': None,
+        'ftp_url': None,
+        'wait_scroll': 1,
+        'wait_alert': 0.1,
+    }
+    try:
+        with open(os.getcwd() + '/config.dat') as file:
+            input_data = file.read().splitlines()
+    except FileNotFoundError:
+        print('config.dat 파일을 찾을 수 없습니다.')
+        pyautogui.alert("config.dat 파일을 찾을 수 없습니다.")
+        exit(0)
+
+    for key in _config_data:
+        for elem in input_data:
+            if elem.startswith(key):
+                _config_data[key] = elem.split(key + ":")[1].strip()
+    if ~_config_data['ftp_folder'].endswith('/'):
+        _config_data['ftp_folder'] = _config_data['ftp_folder'] + '/'
+    if ~_config_data['ftp_url'].endswith('/'):
+        _config_data['ftp_url'] = _config_data['ftp_url'] + '/'
+    _config_data['ftp_url'] = _config_data['ftp_url'] + _config_data['ftp_folder']
+    return _config_data
 
 
 def login():
     login_window = Tk()
     login_window.wm_attributes("-topmost", 1)
-    login_window.title("로그인")
-    login_window.geometry("290x92")
+    login_window.title("자동입력방지")
+    login_window.geometry("290x52")
 
-    label1 = Label(login_window, width=14, text="아이디")
+    label1 = Label(login_window, width=14, text="자동입력방지")
     label1.grid(row=1, column=1)
     entry1 = Entry(login_window, width=20)
-    entry1.insert(0, "thelight47")
     entry1.grid(row=1, column=2)
-    label2 = Label(login_window, width=14, text="비밀번호")
-    label2.grid(row=2, column=1)
-    entry2 = Entry(login_window, show="*", width=20)
-    entry2.insert(0, "11")
-    entry2.grid(row=2, column=2)
-    label3 = Label(login_window, width=14, text="자동입력방지")
-    label3.grid(row=3, column=1)
-    entry3 = Entry(login_window, width=20)
-    entry3.grid(row=3, column=2)
-    entry3.focus()
+    entry1.focus()
     # entry3.bind("<Return>", confirm_login(login_window, entry1.get(), entry2.get(), entry3.get()))
-    button1 = Button(login_window, width=40, text="로그인",
-                     command=lambda: confirm_login(login_window, entry1.get(), entry2.get(), entry3.get()))
+    button1 = Button(login_window, width=40, text="확인",
+                     command=lambda: confirm_login(login_window, entry1.get()))
     button1.grid(row=4, column=1, columnspan=2)
     login_window.mainloop()
 
 
-def confirm_login(_login_window, _id, _pwd, _captcha):
+def confirm_login(_login_window, _captcha):
     _login_window.destroy()
 
     id_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_id"]')
     id_input.click()
     id_input.clear()
-    id_input.send_keys(_id)
+    id_input.send_keys(config_data['login_id'])
 
     pwd_input = driver.find_element(By.CSS_SELECTOR, 'input[name="login_pass"]')
     pwd_input.click()
     pwd_input.clear()
-    pwd_input.send_keys(_pwd)
+    pwd_input.send_keys(config_data['login_pwd'])
 
     captcha_input = driver.find_element(By.CSS_SELECTOR, 'input[name="cap_text"]')
     captcha_input.click()
@@ -83,9 +105,11 @@ def get_popup_url(_uid):
 def get_imgs(_popup_url):
     response = requests.get(_popup_url)
     soup = BeautifulSoup(response.text, "html.parser")
-    raw_img_srcs = soup.find_all('img', {'src': re.compile('^https://'), 'origin': ""})
+    # raw_img_srcs = soup.find_all('img', {'src': re.compile('^https://'), 'origin': ""})
+    raw_img_srcs = soup.find_all('img', {'style': "", 'class': "", 'origin': ""})
     _img_srcs = []
     for elem in raw_img_srcs:
+        _img_src = str(elem.get('src'))
         _img_srcs.append(elem.get('src'))
     return _img_srcs
 
@@ -93,15 +117,21 @@ def get_imgs(_popup_url):
 def upload_imgs(popup_url, date_time, popup_url_ind, _uid):
     _img_srcs = get_imgs(popup_url)
     session = ftplib.FTP()
-    session.connect('222.239.231.240', 2012)
-    session.login("administrator", "J@dpftk4)")
+    session.connect(config_data['ftp_ip'], int(config_data['ftp_port']))
+    session.login(config_data['ftp_id'], config_data['ftp_pwd'])
     session.encoding = 'utf-8'
+    try:
+        session.mkd(config_data['ftp_folder'])
+    except Exception:
+        pass
 
     for _img_src_ind, _img_src in enumerate(_img_srcs):
         print("상품 번호: [" + _uid + "] 옵션: (" + str(popup_url_ind) + ", " + str(_img_src_ind) + ") 업로드 진행중")
+        if _img_src.startswith('//'):
+            _img_src = 'https:' + _img_src
         with urlopen(_img_src) as f:
             session.storbinary(
-                'STOR /NEW/' + _uid + '_'
+                'STOR /' + config_data['ftp_folder'] + _uid + '_'
                 + date_time + '_'
                 + str(popup_url_ind) + '_'
                 + str(_img_src_ind) + '.jpg', f)
@@ -109,30 +139,26 @@ def upload_imgs(popup_url, date_time, popup_url_ind, _uid):
 
 
 def change_imgs(_url, _base_file_name):
-
     _url_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[id$="input"]')
     for _url_inputs_ind in range(len(_url_inputs)):
         _url_input = driver.find_elements(By.CSS_SELECTOR, 'input[id$="input"]')[_url_inputs_ind]
         _uid = _base_file_name.split("_")[0]
         popup_url_ind = _base_file_name.split("_")[2]
-        # _action = ActionChains(driver)
         action.move_to_element(_url_input).perform()
-        # driver.execute_script("window.scrollTo(0, 731)")
-        # print(_url)
-        # print(_url_input)
         print("상품 번호: [" + _uid + "] 옵션: (" + str(popup_url_ind) + ", " + str(_url_inputs_ind) + ") 이미지 변경 진행중")
-        _file_name = "https://thelight47777.add4s.co.kr/TreeImgjl4/NEW/" + _base_file_name + str(_url_inputs_ind) + ".jpg"
+        _file_name = config_data['ftp_url'] + _base_file_name + str(_url_inputs_ind) + ".jpg"
         _url_input.click()
         _url_input.clear()
         _url_input.send_keys(_file_name)
         _url_input.send_keys(Keys.ENTER)
         while True:
             try:
+                time.sleep(float(config_data['wait_alert']))
                 alert = driver.switch_to.alert
                 alert.accept()
                 break
             except NoAlertPresentException:
-                time.sleep(0.1)
+                pass
 
 
 def main_job():
@@ -161,6 +187,7 @@ def main_job():
         prev_height = driver.execute_script("return document.body.scrollHeight")
         while True:
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+            time.sleep(float(config_data['wait_scroll']))
             curr_height = driver.execute_script("return document.body.scrollHeight")
 
             if curr_height == prev_height:
@@ -207,6 +234,8 @@ def main_job():
 
 
 if __name__ == '__main__':
+
+    config_data = get_config_data()
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
