@@ -2,15 +2,17 @@ import requests
 import ftplib
 import warnings
 import time
+import sys
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
+from urllib.request import Request
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException, NoAlertPresentException, UnexpectedAlertPresentException
+from selenium.common.exceptions import InvalidSessionIdException, NoAlertPresentException, UnexpectedAlertPresentException
 from tkinter import *
 import pyautogui
 from webdriver_manager.chrome import ChromeDriverManager
@@ -18,7 +20,7 @@ import datetime
 import os
 
 
-# pyinstaller main.py -F --upx-dir C:\DevStudy\upx401w64\
+# pyinstaller macro.py -F --upx-dir C:\DevStudy\upx401w64\
 
 def get_config_data():
     _config_data = {
@@ -129,7 +131,8 @@ def upload_imgs(popup_url, date_time, popup_url_ind, _uid):
         print("상품 번호: [" + _uid + "] 옵션: (" + str(popup_url_ind) + ", " + str(_img_src_ind) + ") 업로드 진행중")
         if _img_src.startswith('//'):
             _img_src = 'https:' + _img_src
-        with urlopen(_img_src) as f:
+        req = Request(_img_src, headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req) as f:
             session.storbinary(
                 'STOR /' + config_data['ftp_folder'] + _uid + '_'
                 + date_time + '_'
@@ -161,16 +164,23 @@ def change_imgs(_url, _base_file_name):
                 pass
 
 
+def close_job(_driver, _wait_window):
+    _driver.close()
+    _wait_window.destroy()
+
+
 def main_job():
     driver.get('https://tmg191.cafe24.com/mall/admin/admin_goods.php?ps_num=100&ps_page=1')
 
     wait_window = Tk()
     wait_window.wm_attributes("-topmost", 1)
     wait_window.title("대기")
-    wait_window.geometry("150x32")
+    wait_window.geometry("150x52")
     button1 = Button(wait_window, width=20, text="진행",
                      command=lambda: [driver.execute_script('send_search()'), wait_window.destroy()])
     button1.grid(row=1, column=1, columnspan=1)
+    button2 = Button(wait_window, width=20, text="종료", command=lambda: close_job(driver, wait_window))
+    button2.grid(row=2, column=1, columnspan=1)
     wait_window.mainloop()
 
     page_num = int(1)
@@ -178,7 +188,11 @@ def main_job():
     success = int(0)
     fail = int(0)
 
-    base_url = driver.current_url.split('ps_page')[0] + '&ps_page='
+    base_url = None
+    try:
+        base_url = driver.current_url.split('ps_page')[0] + '&ps_page='
+    except InvalidSessionIdException:
+        sys.exit()
 
     while True:
         url = base_url + str(page_num)
@@ -220,6 +234,8 @@ def main_job():
                         print("작업 중 오류 발생")
                         print(e)
                         fail += 1
+                        with open(os.getcwd() + '/error.txt', 'w') as file:
+                            file.write('[' + uid + '] ' + str(e))
                         raise e
                 success += 1
             except Exception as e:
@@ -247,4 +263,6 @@ if __name__ == '__main__':
 
     driver.get('https://tmg191.cafe24.com/mall/admin/admin_login.php')
     login()
-    main_job()
+    while True:
+        main_job()
+
