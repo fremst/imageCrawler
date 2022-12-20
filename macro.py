@@ -19,8 +19,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 import datetime
 import os
 
-
 # pyinstaller macro.py -F --upx-dir C:\DevStudy\upx401w64\
+
 
 def get_config_data():
     _config_data = {
@@ -99,6 +99,12 @@ def confirm_login(_login_window, _captcha):
         login()
 
 
+def set_input_values(input_values, page_num, max_uid, min_uid):
+    input_values['page_num'] = int(page_num)
+    input_values['max_uid'] = int(max_uid)
+    input_values['min_uid'] = int(min_uid)
+
+
 def get_popup_url(_uid):
     _url = "https://tmg191.cafe24.com/mall/admin/admin_goods_change_image_all.php?goods_uid=" + _uid
     return _url
@@ -170,20 +176,43 @@ def close_job(_driver, _wait_window):
 
 
 def main_job():
+
+    input_values = {
+        "page_num": int(1),
+        "max_uid": int(0),
+        "min_uid": int(0)
+    }
+
     driver.get('https://tmg191.cafe24.com/mall/admin/admin_goods.php?ps_num=100&ps_page=1')
 
     wait_window = Tk()
+
     wait_window.wm_attributes("-topmost", 1)
     wait_window.title("대기")
-    wait_window.geometry("150x52")
-    button1 = Button(wait_window, width=20, text="진행",
-                     command=lambda: [driver.execute_script('send_search()'), wait_window.destroy()])
-    button1.grid(row=1, column=1, columnspan=1)
-    button2 = Button(wait_window, width=20, text="종료", command=lambda: close_job(driver, wait_window))
-    button2.grid(row=2, column=1, columnspan=1)
+    wait_window.geometry("173x116")
+    label1 = Label(wait_window, width=12, text="페이지번호>=")
+    label1.grid(row=1, column=1)
+    entry1 = Entry(wait_window, width=10)
+    entry1.insert(0, "1")
+    entry1.grid(row=1, column=2)
+    label2 = Label(wait_window, width=12, text="상품번호<=")
+    label2.grid(row=2, column=1)
+    entry2 = Entry(wait_window, width=10)
+    entry2.insert(0, "0")
+    entry2.grid(row=2, column=2)
+    label3 = Label(wait_window, width=12, text="상품번호>=")
+    label3.grid(row=3, column=1)
+    entry3 = Entry(wait_window, width=10)
+    entry3.insert(0, "0")
+    entry3.grid(row=3, column=2)
+    button1 = Button(wait_window, width=22, text="진행",
+                     command=lambda: [set_input_values(input_values, entry1.get(), entry2.get(), entry3.get()), driver.execute_script('send_search()'), wait_window.destroy()])
+    button1.grid(row=4, column=1, columnspan=2)
+    button2 = Button(wait_window, width=22, text="종료", command=lambda: close_job(driver, wait_window))
+    button2.grid(row=5, column=1, columnspan=2)
+
     wait_window.mainloop()
 
-    page_num = int(1)
     job_count = int(0)
     success = int(0)
     fail = int(0)
@@ -195,7 +224,7 @@ def main_job():
         sys.exit()
 
     while True:
-        url = base_url + str(page_num)
+        url = base_url + str(input_values['page_num'])
         driver.get(url)
 
         prev_height = driver.execute_script("return document.body.scrollHeight")
@@ -217,34 +246,37 @@ def main_job():
             job_count += 1
             print(f'{job_count}번째 상품')
             uid = item_id.get_attribute('value')
-            popup_base_url = get_popup_url(uid)
-            popup_urls = [popup_base_url, popup_base_url + '&mode=option', popup_base_url + '&mode=detail']
-            driver.execute_script('window.open()')
-            driver.switch_to.window(driver.window_handles[-1])
+            if (int(uid) > input_values['max_uid'] != int(0)) or (int(uid) < input_values['min_uid'] != int(0)):
+                continue
+            else:
+                popup_base_url = get_popup_url(uid)
+                popup_urls = [popup_base_url, popup_base_url + '&mode=option', popup_base_url + '&mode=detail']
+                driver.execute_script('window.open()')
+                driver.switch_to.window(driver.window_handles[-1])
 
-            try:
-                for popup_url_ind, popup_url in enumerate(popup_urls):
-                    driver.get(popup_url)
-                    try:
-                        date_time = datetime.datetime.now().strftime("%y%m%d")
-                        upload_imgs(popup_url, date_time, popup_url_ind, uid)
-                        _base_file_name = uid + '_' + date_time + '_' + str(popup_url_ind) + '_'
-                        change_imgs(popup_url, _base_file_name)
-                    except Exception as e:
-                        print("작업 중 오류 발생")
-                        print(e)
-                        fail += 1
-                        with open(os.getcwd() + '/error.txt', 'w') as file:
-                            file.write('[' + uid + '] ' + str(e))
-                        raise e
-                success += 1
-            except Exception as e:
-                pass
+                try:
+                    for popup_url_ind, popup_url in enumerate(popup_urls):
+                        driver.get(popup_url)
+                        try:
+                            date_time = datetime.datetime.now().strftime("%y%m%d")
+                            upload_imgs(popup_url, date_time, popup_url_ind, uid)
+                            _base_file_name = uid + '_' + date_time + '_' + str(popup_url_ind) + '_'
+                            change_imgs(popup_url, _base_file_name)
+                        except Exception as e:
+                            print("작업 중 오류 발생")
+                            print(e)
+                            fail += 1
+                            with open(os.getcwd() + '/error.txt', 'w') as file:
+                                file.write('[' + uid + '] ' + str(e))
+                            raise e
+                    success += 1
+                except Exception as e:
+                    pass
 
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
 
-        page_num += 1
+        input_values['page_num'] += 1
     pyautogui.alert(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
     print(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
 
