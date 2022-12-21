@@ -12,7 +12,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import InvalidSessionIdException, NoAlertPresentException, UnexpectedAlertPresentException
+from selenium.common.exceptions import InvalidSessionIdException, NoAlertPresentException, UnexpectedAlertPresentException, NoSuchWindowException, WebDriverException
 from tkinter import *
 import pyautogui
 from webdriver_manager.chrome import ChromeDriverManager
@@ -160,7 +160,12 @@ def change_imgs(_url, _base_file_name):
         _url_input.clear()
         _url_input.send_keys(_file_name)
         _url_input.send_keys(Keys.ENTER)
-        while True:
+        for i in range(0, 10):
+            if i == 9:
+                print(float(config_data['wait_alert'])*10, '초 대기 후 스킵')
+                with open(os.getcwd() + '/error.txt', 'w') as file:
+                    file.write('[' + _uid + '] ' + '스킵')
+                continue
             try:
                 time.sleep(float(config_data['wait_alert']))
                 alert = driver.switch_to.alert
@@ -256,12 +261,15 @@ def main_job():
 
                 try:
                     for popup_url_ind, popup_url in enumerate(popup_urls):
-                        driver.get(popup_url)
                         try:
+                            driver.get(popup_url)
                             date_time = datetime.datetime.now().strftime("%y%m%d")
                             upload_imgs(popup_url, date_time, popup_url_ind, uid)
                             _base_file_name = uid + '_' + date_time + '_' + str(popup_url_ind) + '_'
                             change_imgs(popup_url, _base_file_name)
+                        except NoSuchWindowException:
+                            print('크롬 창이 종료되었습니다.')
+                            break
                         except Exception as e:
                             print("작업 중 오류 발생")
                             print(e)
@@ -296,5 +304,8 @@ if __name__ == '__main__':
     driver.get('https://tmg191.cafe24.com/mall/admin/admin_login.php')
     login()
     while True:
-        main_job()
-
+        try:
+            main_job()
+        except WebDriverException:
+            print('웹 드라이버가 종료되었습니다.')
+            break
