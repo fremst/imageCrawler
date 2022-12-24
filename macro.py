@@ -1,3 +1,5 @@
+import tkinter
+
 import requests
 import ftplib
 import warnings
@@ -99,10 +101,11 @@ def confirm_login(_login_window, _captcha):
         login()
 
 
-def set_input_values(input_values, page_num, max_uid, min_uid):
+def set_input_values(input_values, page_num, max_uid, min_uid, tab1, tab2, tab3):
     input_values['page_num'] = int(page_num)
     input_values['max_uid'] = int(max_uid)
     input_values['min_uid'] = int(min_uid)
+    input_values['tab'] = [tab1, tab2, tab3]
 
 
 def get_popup_url(_uid):
@@ -160,12 +163,7 @@ def change_imgs(_url, _base_file_name):
         _url_input.clear()
         _url_input.send_keys(_file_name)
         _url_input.send_keys(Keys.ENTER)
-        for i in range(0, 10):
-            if i == 9:
-                print(float(config_data['wait_alert'])*10, '초 대기 후 스킵')
-                with open(os.getcwd() + '/error.txt', 'w') as file:
-                    file.write('[' + _uid + '] ' + '스킵')
-                continue
+        while True:
             try:
                 time.sleep(float(config_data['wait_alert']))
                 alert = driver.switch_to.alert
@@ -194,27 +192,45 @@ def main_job():
 
     wait_window.wm_attributes("-topmost", 1)
     wait_window.title("대기")
-    wait_window.geometry("173x116")
-    label1 = Label(wait_window, width=12, text="페이지번호>=")
+    wait_window.geometry("290x136")
+    label1 = Label(wait_window, width=10, text="페이지번호>=")
     label1.grid(row=1, column=1)
-    entry1 = Entry(wait_window, width=10)
+    entry1 = Entry(wait_window, width=20)
     entry1.insert(0, "1")
-    entry1.grid(row=1, column=2)
-    label2 = Label(wait_window, width=12, text="상품번호<=")
-    label2.grid(row=2, column=1)
-    entry2 = Entry(wait_window, width=10)
+    entry1.grid(row=1, column=2, columnspan=3)
+    label2 = Label(wait_window, width=10, text="상품번호<=")
+    label2.grid(row=3, column=1)
+    entry2 = Entry(wait_window, width=20)
     entry2.insert(0, "0")
-    entry2.grid(row=2, column=2)
-    label3 = Label(wait_window, width=12, text="상품번호>=")
-    label3.grid(row=3, column=1)
-    entry3 = Entry(wait_window, width=10)
+    entry2.grid(row=3, column=2, columnspan=3)
+    label3 = Label(wait_window, width=10, text="상품번호>=")
+    label3.grid(row=2, column=1)
+    entry3 = Entry(wait_window, width=20)
     entry3.insert(0, "0")
-    entry3.grid(row=3, column=2)
-    button1 = Button(wait_window, width=22, text="진행",
-                     command=lambda: [set_input_values(input_values, entry1.get(), entry2.get(), entry3.get()), driver.execute_script('send_search()'), wait_window.destroy()])
-    button1.grid(row=4, column=1, columnspan=2)
-    button2 = Button(wait_window, width=22, text="종료", command=lambda: close_job(driver, wait_window))
-    button2.grid(row=5, column=1, columnspan=2)
+    entry3.grid(row=2, column=2, columnspan=3)
+    label4 = Label(wait_window, width=10, text="수정 탭")
+    label4.grid(row=4, column=1)
+    chk1_var = IntVar()
+    chk1_var.set(1)
+    chk1 = Checkbutton(wait_window, text="대표", variable=chk1_var, width=2)
+    chk1.grid(row=4, column=2)
+    chk2_var = IntVar()
+    chk2_var.set(1)
+    chk2 = Checkbutton(wait_window, text="옵션", variable=chk2_var, width=2)
+    chk2.grid(row=4, column=3)
+    chk3_var = IntVar()
+    chk3_var.set(1)
+    chk3 = Checkbutton(wait_window, text="상세", variable=chk3_var, width=2)
+    chk3.grid(row=4, column=4)
+    button1 = Button(wait_window, width=40, text="진행",
+                     command=lambda: [
+                         set_input_values(input_values, entry1.get(), entry2.get(), entry3.get(), chk1_var.get(), chk2_var.get(), chk3_var.get()),
+                         driver.execute_script('send_search()'), wait_window.destroy()
+                     ]
+                     )
+    button1.grid(row=5, column=1, columnspan=4)
+    button2 = Button(wait_window, width=40, text="종료", command=lambda: close_job(driver, wait_window))
+    button2.grid(row=6, column=1, columnspan=4)
 
     wait_window.mainloop()
 
@@ -255,7 +271,12 @@ def main_job():
                 continue
             else:
                 popup_base_url = get_popup_url(uid)
-                popup_urls = [popup_base_url, popup_base_url + '&mode=option', popup_base_url + '&mode=detail']
+                popup_urls_all = [popup_base_url, popup_base_url + '&mode=option', popup_base_url + '&mode=detail']
+                popup_urls = []
+                tab = input_values['tab']
+                for (ind, tab_chk) in enumerate(tab):
+                    if tab_chk:
+                        popup_urls.append(popup_urls_all[ind])
                 driver.execute_script('window.open()')
                 driver.switch_to.window(driver.window_handles[-1])
 
@@ -278,6 +299,8 @@ def main_job():
                                 file.write('[' + uid + '] ' + str(e))
                             raise e
                     success += 1
+                except NoSuchWindowException:
+                    continue
                 except Exception as e:
                     pass
 
