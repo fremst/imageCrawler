@@ -1,5 +1,3 @@
-import tkinter
-
 import requests
 import ftplib
 import warnings
@@ -68,7 +66,7 @@ def login():
     entry1 = Entry(login_window, width=20)
     entry1.grid(row=1, column=2)
     entry1.focus()
-    # entry3.bind("<Return>", confirm_login(login_window, entry1.get(), entry2.get(), entry3.get()))
+    # entry4.bind("<Return>", confirm_login(login_window, entry1.get(), entry3.get(), entry4.get()))
     button1 = Button(login_window, width=40, text="확인",
                      command=lambda: confirm_login(login_window, entry1.get()))
     button1.grid(row=4, column=1, columnspan=2)
@@ -101,8 +99,9 @@ def confirm_login(_login_window, _captcha):
         login()
 
 
-def set_input_values(input_values, page_num, max_uid, min_uid, tab1, tab2, tab3):
-    input_values['page_num'] = int(page_num)
+def set_input_values(input_values, min_page_num, max_page_num, max_uid, min_uid, tab1, tab2, tab3):
+    input_values['min_page_num'] = int(min_page_num)
+    input_values['max_page_num'] = int(max_page_num)
     input_values['max_uid'] = int(max_uid)
     input_values['min_uid'] = int(min_uid)
     input_values['tab'] = [tab1, tab2, tab3]
@@ -181,7 +180,8 @@ def close_job(_driver, _wait_window):
 def main_job():
 
     input_values = {
-        "page_num": int(1),
+        "max_page_num": int(1),
+        "min_page_num": int(0),
         "max_uid": int(0),
         "min_uid": int(0)
     }
@@ -192,45 +192,56 @@ def main_job():
 
     wait_window.wm_attributes("-topmost", 1)
     wait_window.title("대기")
-    wait_window.geometry("290x136")
+    wait_window.geometry("290x161")
+    
     label1 = Label(wait_window, width=10, text="페이지번호>=")
     label1.grid(row=1, column=1)
     entry1 = Entry(wait_window, width=20)
     entry1.insert(0, "1")
     entry1.grid(row=1, column=2, columnspan=3)
-    label2 = Label(wait_window, width=10, text="상품번호<=")
-    label2.grid(row=3, column=1)
+
+    label2 = Label(wait_window, width=10, text="페이지번호<=")
+    label2.grid(row=2, column=1)
     entry2 = Entry(wait_window, width=20)
     entry2.insert(0, "0")
-    entry2.grid(row=3, column=2, columnspan=3)
-    label3 = Label(wait_window, width=10, text="상품번호>=")
-    label3.grid(row=2, column=1)
+    entry2.grid(row=2, column=2, columnspan=3)
+
+    label3 = Label(wait_window, width=10, text="상품번호<=")
+    label3.grid(row=3, column=1)
     entry3 = Entry(wait_window, width=20)
     entry3.insert(0, "0")
-    entry3.grid(row=2, column=2, columnspan=3)
-    label4 = Label(wait_window, width=10, text="수정 탭")
+    entry3.grid(row=3, column=2, columnspan=3)
+    
+    label4 = Label(wait_window, width=10, text="상품번호>=")
     label4.grid(row=4, column=1)
+    entry4 = Entry(wait_window, width=20)
+    entry4.insert(0, "0")
+    entry4.grid(row=4, column=2, columnspan=3)
+    
+    label5 = Label(wait_window, width=10, text="수정 탭")
+    label5.grid(row=5, column=1)
+    
     chk1_var = IntVar()
     chk1_var.set(1)
     chk1 = Checkbutton(wait_window, text="대표", variable=chk1_var, width=2)
-    chk1.grid(row=4, column=2)
+    chk1.grid(row=5, column=2)
     chk2_var = IntVar()
     chk2_var.set(1)
     chk2 = Checkbutton(wait_window, text="옵션", variable=chk2_var, width=2)
-    chk2.grid(row=4, column=3)
+    chk2.grid(row=5, column=3)
     chk3_var = IntVar()
     chk3_var.set(1)
     chk3 = Checkbutton(wait_window, text="상세", variable=chk3_var, width=2)
-    chk3.grid(row=4, column=4)
+    chk3.grid(row=5, column=4)
     button1 = Button(wait_window, width=40, text="진행",
                      command=lambda: [
-                         set_input_values(input_values, entry1.get(), entry2.get(), entry3.get(), chk1_var.get(), chk2_var.get(), chk3_var.get()),
+                         set_input_values(input_values, entry1.get(), entry2.get(), entry3.get(), entry4.get(), chk1_var.get(), chk2_var.get(), chk3_var.get()),
                          driver.execute_script('send_search()'), wait_window.destroy()
                      ]
                      )
-    button1.grid(row=5, column=1, columnspan=4)
+    button1.grid(row=6, column=1, columnspan=4)
     button2 = Button(wait_window, width=40, text="종료", command=lambda: close_job(driver, wait_window))
-    button2.grid(row=6, column=1, columnspan=4)
+    button2.grid(row=7, column=1, columnspan=4)
 
     wait_window.mainloop()
 
@@ -244,8 +255,11 @@ def main_job():
     except InvalidSessionIdException:
         sys.exit()
 
+    page_num = input_values['min_page_num']
     while True:
-        url = base_url + str(input_values['page_num'])
+        if input_values['max_page_num'] != int(0) and page_num > input_values['max_page_num']:
+            break
+        url = base_url + str(page_num)
         driver.get(url)
 
         prev_height = driver.execute_script("return document.body.scrollHeight")
@@ -295,8 +309,8 @@ def main_job():
                             print("작업 중 오류 발생")
                             print(e)
                             fail += 1
-                            with open(os.getcwd() + '/error.txt', 'w') as file:
-                                file.write('[' + uid + '] ' + str(e))
+                            with open(os.getcwd() + '/error.txt', 'a') as file:
+                                file.write('[' + uid + '] ' + str(e) + '\n')
                             raise e
                     success += 1
                 except NoSuchWindowException:
@@ -307,7 +321,7 @@ def main_job():
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
 
-        input_values['page_num'] += 1
+        page_num += 1
     pyautogui.alert(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
     print(f'{job_count}개의 상품 작업 완료! 성공: {success}, 실패: {fail}')
 
