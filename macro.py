@@ -99,7 +99,7 @@ def confirm_login(_login_window, _captcha):
         login()
 
 
-def set_input_values(input_values, min_page_num, max_page_num, max_uid, min_uid, tab1, tab2, tab3):
+def set_input_values(input_values, min_page_num, max_page_num, min_uid, max_uid, tab1, tab2, tab3):
     input_values['min_page_num'] = int(min_page_num)
     input_values['max_page_num'] = int(max_page_num)
     input_values['max_uid'] = int(max_uid)
@@ -206,18 +206,18 @@ def main_job():
     entry2.insert(0, "0")
     entry2.grid(row=2, column=2, columnspan=3)
 
-    label3 = Label(wait_window, width=10, text="상품번호<=")
+    label3 = Label(wait_window, width=10, text="상품번호>=")
     label3.grid(row=3, column=1)
     entry3 = Entry(wait_window, width=20)
     entry3.insert(0, "0")
     entry3.grid(row=3, column=2, columnspan=3)
-    
-    label4 = Label(wait_window, width=10, text="상품번호>=")
+
+    label4 = Label(wait_window, width=10, text="상품번호<=")
     label4.grid(row=4, column=1)
     entry4 = Entry(wait_window, width=20)
     entry4.insert(0, "0")
     entry4.grid(row=4, column=2, columnspan=3)
-    
+
     label5 = Label(wait_window, width=10, text="수정 탭")
     label5.grid(row=5, column=1)
     
