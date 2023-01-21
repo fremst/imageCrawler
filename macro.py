@@ -61,15 +61,20 @@ def login():
     login_window.title("자동입력방지")
     login_window.geometry("290x52")
 
+    row = 1
+    column = 1
     label1 = Label(login_window, width=14, text="자동입력방지")
-    label1.grid(row=1, column=1)
+    label1.grid(row=row, column=column)
+    column += 1
     entry1 = Entry(login_window, width=20)
-    entry1.grid(row=1, column=2)
+    entry1.grid(row=row, column=column)
     entry1.focus()
-    # entry4.bind("<Return>", confirm_login(login_window, entry1.get(), entry3.get(), entry4.get()))
+
+    row += 1
+    column = 1
     button1 = Button(login_window, width=40, text="확인",
                      command=lambda: confirm_login(login_window, entry1.get()))
-    button1.grid(row=4, column=1, columnspan=2)
+    button1.grid(row=row, column=column, columnspan=2)
     login_window.mainloop()
 
 
@@ -193,55 +198,79 @@ def main_job():
     wait_window.wm_attributes("-topmost", 1)
     wait_window.title("대기")
     wait_window.geometry("290x161")
-    
+
+    row = 1
+    column = 1
     label1 = Label(wait_window, width=10, text="페이지번호>=")
-    label1.grid(row=1, column=1)
+    label1.grid(row=row, column=column)
     entry1 = Entry(wait_window, width=20)
     entry1.insert(0, "1")
-    entry1.grid(row=1, column=2, columnspan=3)
+    column += 1
+    entry1.grid(row=row, column=column, columnspan=3)
 
+    row += 1
+    column = 1
     label2 = Label(wait_window, width=10, text="페이지번호<=")
-    label2.grid(row=2, column=1)
+    label2.grid(row=2, column=column)
+    column += 1
     entry2 = Entry(wait_window, width=20)
     entry2.insert(0, "0")
-    entry2.grid(row=2, column=2, columnspan=3)
+    entry2.grid(row=row, column=column, columnspan=3)
 
+    row += 1
+    column = 1
     label3 = Label(wait_window, width=10, text="상품번호>=")
-    label3.grid(row=3, column=1)
+    label3.grid(row=row, column=1)
+    column += 1
     entry3 = Entry(wait_window, width=20)
     entry3.insert(0, "0")
-    entry3.grid(row=3, column=2, columnspan=3)
+    entry3.grid(row=row, column=column, columnspan=3)
 
+    row += 1
+    column = 1
     label4 = Label(wait_window, width=10, text="상품번호<=")
-    label4.grid(row=4, column=1)
+    label4.grid(row=row, column=column)
+    column += 1
     entry4 = Entry(wait_window, width=20)
     entry4.insert(0, "0")
-    entry4.grid(row=4, column=2, columnspan=3)
+    entry4.grid(row=row, column=column, columnspan=3)
 
+    row += 1
+    column = 1
     label5 = Label(wait_window, width=10, text="수정 탭")
-    label5.grid(row=5, column=1)
-    
+    label5.grid(row=5, column=column)
+
+    column += 1
     chk1_var = IntVar()
     chk1_var.set(1)
     chk1 = Checkbutton(wait_window, text="대표", variable=chk1_var, width=2)
-    chk1.grid(row=5, column=2)
+    chk1.grid(row=row, column=column)
+
+    column += 1
     chk2_var = IntVar()
     chk2_var.set(1)
     chk2 = Checkbutton(wait_window, text="옵션", variable=chk2_var, width=2)
-    chk2.grid(row=5, column=3)
+    chk2.grid(row=row, column=column)
+
+    column += 1
     chk3_var = IntVar()
     chk3_var.set(1)
     chk3 = Checkbutton(wait_window, text="상세", variable=chk3_var, width=2)
-    chk3.grid(row=5, column=4)
+    chk3.grid(row=row, column=column)
     button1 = Button(wait_window, width=40, text="진행",
                      command=lambda: [
                          set_input_values(input_values, entry1.get(), entry2.get(), entry3.get(), entry4.get(), chk1_var.get(), chk2_var.get(), chk3_var.get()),
                          driver.execute_script('send_search()'), wait_window.destroy()
                      ]
                      )
-    button1.grid(row=6, column=1, columnspan=4)
+    row += 1
+    column = 1
+    button1.grid(row=row, column=column, columnspan=4)
     button2 = Button(wait_window, width=40, text="종료", command=lambda: close_job(driver, wait_window))
-    button2.grid(row=7, column=1, columnspan=4)
+
+    row += 1
+    column = 1
+    button2.grid(row=row, column=column, columnspan=4)
 
     wait_window.mainloop()
 
